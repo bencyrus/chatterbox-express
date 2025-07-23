@@ -1,43 +1,52 @@
 services:
-  backend:
+  # Main API service
+  api:
     build: .
-    container_name: cue-backend
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-    env_file:
-      - .env
+      - PORT=3000
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - DB_SEND_PASSWORD=${DB_SEND_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGIN=*
     volumes:
-      - ./data:/app/data
+      # Mount database file to persist data
       - ./cue.db:/app/cue.db
+      - ./en_cue_cards.json:/app/en_cue_cards.json
+      - ./fr_cue_cards.json:/app/fr_cue_cards.json
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
-  backup-cron:
-    image: alpine:latest
-    container_name: cue-backup-cron
-    depends_on:
-      - backend
+  # Database backup job (runs on schedule)
+  backup-job:
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
     environment:
-      - TZ=America/Toronto
-    env_file:
-      - .env
-    volumes:
-      - ./backup-script.sh:/backup-script.sh:ro
-    command: >
-      sh -c "
-        apk add --no-cache curl tzdata &&
-        ln -sf /usr/share/zoneinfo/America/Toronto /etc/localtime &&
-        echo 'America/Toronto' > /etc/timezone &&
-        echo '0 0,12 * * * /backup-script.sh' | crontab - &&
-        crond -f -l 2
-      "
-    restart: unless-stopped
+      - API_URL=http://api:3000
+      - BACKUP_EMAIL=${BACKUP_EMAIL:-admin@example.com}
+      - DB_SEND_PASSWORD=${DB_SEND_PASSWORD}
+    depends_on:
+      - api
+    restart: "no" # Don't restart on failure to prevent rate limit loops
+    profiles:
+      - backup # Only run when explicitly requested
 
-volumes:
-  data:
+networks:
+  default:
+    name: cue-network
