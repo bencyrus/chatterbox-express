@@ -33,7 +33,7 @@ router.get("/", (req, res) => {
     environment: process.env.NODE_ENV || "development",
     timestamp: new Date().toISOString(),
     endpoints: [
-      "GET /api/v1/prompts?language=en|fr",
+      "GET /api/v1/prompts?language=en|fr (authenticated)",
       "POST /api/v1/backup-db",
       "POST /api/v1/auth/request-login",
       "POST /api/v1/auth/verify-login",

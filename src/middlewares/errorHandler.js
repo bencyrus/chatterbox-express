@@ -87,7 +87,7 @@ export const notFoundHandler = (req, res) => {
     message: `Route ${req.method} ${req.url} not found`,
     timestamp: new Date().toISOString(),
     availableEndpoints: [
-      "GET /api/v1/prompts?language=en|fr",
+      "GET /api/v1/prompts?language=en|fr (authenticated)",
       "POST /api/v1/backup-db",
       "POST /api/v1/auth/request-login",
       "POST /api/v1/auth/verify-login",

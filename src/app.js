@@ -77,7 +77,7 @@ export function createApp() {
         endpoints: [
           "GET /health - Health check",
           "GET /api/v1 - API information",
-          "GET /api/v1/prompts?language=en|fr - Get prompts",
+          "GET /api/v1/prompts?language=en|fr - Get prompts (authenticated)",
           "POST /api/v1/backup-db - Send database backup",
           "POST /api/v1/auth/request-login - Request login code",
           "POST /api/v1/auth/verify-login - Verify login code",

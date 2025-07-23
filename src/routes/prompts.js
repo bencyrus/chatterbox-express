@@ -18,6 +18,7 @@ const router = express.Router();
 router.get(
   "/",
   rateLimitPresets.prompts, // Lenient rate limiting for prompts
+  authenticateJWT, // Require authentication for prompts
   validateLanguage, // Validate language parameter
   promptController.getPrompts
 );
