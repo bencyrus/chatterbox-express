@@ -22,7 +22,10 @@ class AuthService {
    * @returns {string} 6-digit login code
    */
   generateLoginCode() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    // Use cryptographically secure random number generation
+    const min = 100000;
+    const max = 999999;
+    return crypto.randomInt(min, max + 1).toString();
   }
 
   /**
@@ -74,14 +77,34 @@ class AuthService {
     const client = await pool.connect();
 
     try {
-      const query = `
+      // Check recent attempts
+      const recentQuery = `
         select count(*) as count from login_attempts 
         where email = $1 and created_at > now() - interval '${this.rateLimitMinutes} minutes'
       `;
+      const recentResult = await client.query(recentQuery, [email]);
 
-      const result = await client.query(query, [email]);
-      return result.rows[0].count === "0";
+      // Check for account lockout (too many failed attempts in last hour)
+      const lockoutQuery = `
+        select count(*) as failed_count from login_attempts 
+        where email = $1 
+        and created_at > now() - interval '1 hour' 
+        and is_used = false
+      `;
+      const lockoutResult = await client.query(lockoutQuery, [email]);
+
+      // Lock account if more than 10 failed attempts in last hour
+      if (parseInt(lockoutResult.rows[0].failed_count) >= 10) {
+        throw new Error(
+          "Account temporarily locked due to too many failed attempts. Please try again later."
+        );
+      }
+
+      return recentResult.rows[0].count === "0";
     } catch (error) {
+      if (error.message.includes("Account temporarily locked")) {
+        throw error;
+      }
       throw new Error("database error checking rate limit");
     } finally {
       client.release();
@@ -123,31 +146,44 @@ class AuthService {
     try {
       await client.query("begin");
 
+      // Get all recent valid attempts for this email (timing attack protection)
       const query = `
         select * from login_attempts 
-        where email = $1 and code = $2 and is_used = false 
+        where email = $1 and is_used = false 
         and created_at > now() - interval '${this.loginCodeExpiryMinutes} minutes'
         order by created_at desc
-        limit 1
       `;
 
-      const result = await client.query(query, [email, code]);
+      const result = await client.query(query, [email]);
 
-      if (result.rows.length === 0) {
+      let matchedAttempt = null;
+
+      // Use constant-time comparison to prevent timing attacks
+      for (const attempt of result.rows) {
+        if (
+          crypto.timingSafeEqual(
+            Buffer.from(attempt.code, "utf8"),
+            Buffer.from(code, "utf8")
+          )
+        ) {
+          matchedAttempt = attempt;
+          break;
+        }
+      }
+
+      if (!matchedAttempt) {
         await client.query("commit");
         return null;
       }
 
-      const attempt = result.rows[0];
-
       // mark attempt as used
       await client.query(
         "update login_attempts set is_used = true where attemptid = $1",
-        [attempt.attemptid]
+        [matchedAttempt.attemptid]
       );
 
       await client.query("commit");
-      return attempt;
+      return matchedAttempt;
     } catch (error) {
       await client.query("rollback");
       throw new Error("database error verifying login code");
