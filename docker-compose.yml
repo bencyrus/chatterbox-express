@@ -1,0 +1,43 @@
+services:
+  backend:
+    build: .
+    container_name: cue-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./cue.db:/app/cue.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backup-cron:
+    image: alpine:latest
+    container_name: cue-backup-cron
+    depends_on:
+      - backend
+    environment:
+      - TZ=America/Toronto
+    env_file:
+      - .env
+    volumes:
+      - ./backup-script.sh:/backup-script.sh:ro
+    command: >
+      sh -c "
+        apk add --no-cache curl tzdata &&
+        ln -sf /usr/share/zoneinfo/America/Toronto /etc/localtime &&
+        echo 'America/Toronto' > /etc/timezone &&
+        echo '0 0,12 * * * /backup-script.sh' | crontab - &&
+        crond -f -l 2
+      "
+    restart: unless-stopped
+
+volumes:
+  data:

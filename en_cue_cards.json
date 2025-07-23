@@ -1,0 +1,102 @@
+[
+  {
+    "id": 1,
+    "main_prompt": "Describe Something You Do That Can Help You Concentrate On Work/Study",
+    "followups": [
+      "What is it?",
+      "When do you do it?",
+      "How did you learn about it?",
+      "How does it help you concentrate?"
+    ]
+  },
+  {
+    "id": 2,
+    "main_prompt": "Describe a challenge you faced that you thought was rather difficult",
+    "followups": [
+      "What it was",
+      "When and where you faced it",
+      "Why you thought it was a difficult challenge",
+      "And explain how you felt at the time"
+    ]
+  },
+  {
+    "id": 3,
+    "main_prompt": "Describe something that surprised you and made you happy",
+    "followups": [
+      "What it was?",
+      "Who did this?",
+      "How you found out about it and what you did?",
+      "And explain why it surprised you and made you happy."
+    ]
+  },
+  {
+    "id": 4,
+    "main_prompt": "Describe a place with a lot of trees that you would like to visit (e.g. a forest, oasis)",
+    "followups": [
+      "Where is this place?",
+      "Why you want to visit it?",
+      "What activities you plan to do there?",
+      "And explain how you think it will make you feel."
+    ]
+  },
+  {
+    "id": 5,
+    "main_prompt": "Describe A Friend You Like To Talk With",
+    "followups": [
+      "Who he/she is?",
+      "What would you like to talk about?",
+      "Why do you like to talk with him/her?",
+      "How you feel about him/her?"
+    ]
+  },
+  {
+    "id": 6,
+    "main_prompt": "Describe a city that is very interesting.",
+    "followups": [
+      "Which city is it?",
+      "What is it famous for?",
+      "How do you know about it?",
+      "Why is it interesting?"
+    ]
+  },
+  {
+    "id": 7,
+    "main_prompt": "Describe a public facility( for example a museum or a library ) that been renovated and improved recently",
+    "followups": [
+      "What the facility is?",
+      "When it was renovated and improved?",
+      "What has been renovated and improved?",
+      "And explain how you feel about it."
+    ]
+  },
+  {
+    "id": 8,
+    "main_prompt": "Describe A Skill That You Can Teach Other People",
+    "followups": [
+      "What is it?",
+      "How did you learn it?",
+      "How can you teach others this skill?",
+      "How do you feel about this skill?"
+    ]
+  },
+  {
+    "id": 9,
+    "main_prompt": "Describe a place you visited where the air was polluted",
+    "followups": [
+      "Where the place is?",
+      "When you visited it?",
+      "Why the air was not good?",
+      "And explain how you felt about the place."
+    ]
+  },
+  {
+    "id": 10,
+    "main_prompt": "Describe a person from a different cultural background with whom you enjoy spending time",
+    "followups": [
+      "Who this person is?",
+      "What their cultural background is?",
+      "What activities you do together?",
+      "And explain how this experience impacted you."
+    ]
+  }
+]
