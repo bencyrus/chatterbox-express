@@ -31,22 +31,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  # Database backup job (runs on schedule)
-  backup-job:
-    build:
-      context: .
-      dockerfile: Dockerfile.backup
-    environment:
-      - API_URL=http://api:3000
-      - BACKUP_EMAIL=${BACKUP_EMAIL:-admin@example.com}
-      - DB_SEND_PASSWORD=${DB_SEND_PASSWORD}
-    depends_on:
-      - api
-    restart: "no" # Don't restart on failure to prevent rate limit loops
-    profiles:
-      - backup # Only run when explicitly requested
-
-networks:
-  default:
-    name: cue-network

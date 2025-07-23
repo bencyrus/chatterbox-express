@@ -1,0 +1,12 @@
+{
+  "name": "cue-backup-job",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "backup-job.js",
+  "scripts": {
+    "start": "node backup-job.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
