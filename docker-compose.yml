@@ -13,9 +13,9 @@ services:
       - CORS_ORIGIN=*
     volumes:
       # Mount database file to persist data
-      - ./cue.db:/app/cue.db
-      - ./en_cue_cards.json:/app/en_cue_cards.json
-      - ./fr_cue_cards.json:/app/fr_cue_cards.json
+      - ./chatterbox.db:/app/chatterbox.db
+      - ./en_chatterbox_cards.json:/app/en_chatterbox_cards.json
+      - ./fr_chatterbox_cards.json:/app/fr_chatterbox_cards.json
     restart: unless-stopped
     healthcheck:
       test:

@@ -100,7 +100,7 @@ class Logger {
    * @param {number} port - Server port
    */
   logStartup(port) {
-    this.info("🚀 Cue Backend API started", {
+    this.info("🚀 Chatterbox Express API started", {
       port: port,
       environment: config.nodeEnv,
       timestamp: new Date().toISOString(),
@@ -120,7 +120,7 @@ class Logger {
    * Log application shutdown
    */
   logShutdown() {
-    this.info("🛑 Cue Backend API shutting down gracefully");
+    this.info("🛑 Chatterbox Express API shutting down gracefully");
   }
 }
 

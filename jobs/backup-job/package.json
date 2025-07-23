@@ -1,5 +1,5 @@
 {
-  "name": "cue-backup-job",
+  "name": "chatterbox-backup-job",
   "version": "1.0.0",
   "type": "module",
   "main": "backup-job.js",

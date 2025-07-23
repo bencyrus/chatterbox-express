@@ -127,7 +127,7 @@ async function sendBackupWithRetry() {
         headers: {
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(postData),
-          "User-Agent": "CueBackupJob/1.0",
+          "User-Agent": "ChatterboxBackupJob/1.0",
         },
       };
 
@@ -203,7 +203,7 @@ async function sendBackupWithRetry() {
  * Main execution
  */
 async function main() {
-  console.log("🎯 Cue Database Backup Job Starting...");
+  console.log("🎯 Chatterbox Database Backup Job Starting...");
 
   // Validate configuration
   validateConfig();

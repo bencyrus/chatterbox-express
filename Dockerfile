@@ -1,4 +1,4 @@
-# Production Dockerfile for Cue Backend API
+# Production Dockerfile for Chatterbox Express API
 FROM node:18-alpine
 
 # Set working directory

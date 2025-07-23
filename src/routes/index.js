@@ -19,7 +19,7 @@ router.use("/", backupRoutes); // backup-db is at root level for backward compat
 router.get("/health", (req, res) => {
   res.json({
     status: "OK",
-    message: "Cue Backend API is running",
+    message: "Chatterbox Express API is running",
     timestamp: new Date().toISOString(),
     version: "1.0.0",
   });
@@ -28,7 +28,7 @@ router.get("/health", (req, res) => {
 // Root API endpoint with information
 router.get("/", (req, res) => {
   res.json({
-    message: "🎯 Cue Backend API",
+    message: "🎯 Chatterbox Express API",
     version: "1.0.0",
     environment: process.env.NODE_ENV || "development",
     timestamp: new Date().toISOString(),

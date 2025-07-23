@@ -40,7 +40,7 @@ class AuthService {
 
     return jwt.sign(payload, this.jwtSecret, {
       expiresIn: this.jwtExpiresIn,
-      issuer: "cue-app",
+      issuer: "chatterbox-app",
     });
   }
 

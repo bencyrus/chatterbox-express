@@ -59,7 +59,7 @@ export function createApp() {
   app.get("/health", (req, res) => {
     res.json({
       status: "OK",
-      message: "Cue Backend API is healthy",
+      message: "Chatterbox Express API is healthy",
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       version: "1.0.0",
@@ -69,7 +69,7 @@ export function createApp() {
   // Root endpoint
   app.get("/", (req, res) => {
     res.json({
-      message: "🎯 Cue Backend API",
+      message: "🎯 Chatterbox Express API",
       version: "1.0.0",
       environment: config.nodeEnv,
       timestamp: new Date().toISOString(),

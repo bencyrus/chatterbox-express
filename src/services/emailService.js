@@ -54,7 +54,7 @@ class EmailService {
       const result = await this.getResendClient().emails.send({
         from: this.fromEmail,
         to: [toEmail],
-        subject: "Your Cue login code",
+        subject: "Your Chatterbox login code",
         html: this.generateLoginCodeHTML(loginCode),
         text: this.generateLoginCodeText(loginCode),
       });
@@ -83,7 +83,7 @@ class EmailService {
         );
       }
 
-      const dbPath = path.join(__dirname, "../../cue.db");
+      const dbPath = path.join(__dirname, "../../chatterbox.db");
 
       // Check if database file exists
       if (!fs.existsSync(dbPath)) {
@@ -95,12 +95,12 @@ class EmailService {
 
       // Generate filename with timestamp
       const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-      const filename = `cue-backup-${timestamp}.db`;
+      const filename = `chatterbox-backup-${timestamp}.db`;
 
       const result = await this.getResendClient().emails.send({
         from: this.fromEmail,
         to: [toEmail],
-        subject: `Cue Database Backup - ${timestamp}`,
+        subject: `Chatterbox Database Backup - ${timestamp}`,
         html: this.generateBackupHTML(timestamp, dbBuffer.length),
         attachments: [
           {
@@ -131,14 +131,14 @@ class EmailService {
   generateLoginCodeHTML(loginCode) {
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #333; text-align: center;">🎯 Cue Login</h2>
+        <h2 style="color: #333; text-align: center;">🎯 Chatterbox Login</h2>
         <div style="background-color: #f8f9fa; border-radius: 8px; padding: 30px; text-align: center; margin: 20px 0;">
           <h1 style="font-size: 36px; margin: 0; color: #007AFF; letter-spacing: 8px; font-family: monospace;">
             ${loginCode}
           </h1>
         </div>
         <p style="color: #666; text-align: center; margin: 20px 0;">
-          Enter this code in your Cue app to complete your login.
+          Enter this code in your Chatterbox app to complete your login.
         </p>
         <p style="color: #999; text-align: center; font-size: 14px;">
           This code will expire in 10 minutes for your security.
@@ -157,9 +157,9 @@ class EmailService {
    * @returns {string} Plain text content
    */
   generateLoginCodeText(loginCode) {
-    return `Your Cue login code is: ${loginCode}
+    return `Your Chatterbox login code is: ${loginCode}
 
-Enter this code in your Cue app to complete your login.
+Enter this code in your Chatterbox app to complete your login.
 
 This code will expire in 10 minutes for your security.
 
@@ -174,13 +174,13 @@ If you didn't request this code, you can safely ignore this email.`;
    */
   generateBackupHTML(timestamp, fileSize) {
     return `
-      <h2>Cue Database Backup</h2>
+      <h2>Chatterbox Database Backup</h2>
       <p>Hi there! 👋</p>
       <p>Here's your scheduled database backup for <strong>${timestamp}</strong>.</p>
       <p>The attached file contains all your prompts and translations data.</p>
       <p>File size: ${(fileSize / 1024).toFixed(1)} KB</p>
       <hr>
-      <p><small>This is an automated backup from your Cue backend API.</small></p>
+      <p><small>This is an automated backup from your Chatterbox Express API.</small></p>
     `;
   }
 }

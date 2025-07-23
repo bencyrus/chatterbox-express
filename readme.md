@@ -1,6 +1,6 @@
-# 🎯 Cue Backend API
+# 🎯 Chatterbox Express API
 
-A simple Express.js backend API for the Cue iOS app with SQLite database and normalized schema.
+A simple Express.js API for the Chatterbox iOS app with SQLite database and normalized schema.
 
 ## 🚀 Getting Started
 
@@ -90,9 +90,9 @@ curl -X POST http://localhost:3000/api/v1/backup-db \
 
 ## 📱 Connecting iOS App
 
-To connect your Swift app to this backend:
+To connect your Swift app to this Express API:
 
-1. **Update the base URL** in `cue/cueApp.swift`:
+1. **Update the base URL** in `chatterbox/chatterboxApp.swift`:
 
 ```swift
 // Replace this line:
@@ -118,7 +118,7 @@ self.apiService = NetworkManager(baseURL: "http://localhost:3000/api/v1")
 
 3. **Update your iOS models** to match the new response format with `followups` array
 
-4. **Run your iOS app** - it will now connect to your local Express backend!
+4. **Run your iOS app** - it will now connect to your local Express API!
 
 ## 🗄️ Database Structure
 
@@ -162,15 +162,15 @@ create table translation (
 ## 📁 Project Structure
 
 ```
-cue-backend/
-├── index.js              # Main Express server
-├── database.js           # SQLite setup and seeding
-├── en_cue_cards.json     # English prompts data
-├── fr_cue_cards.json     # French prompts data
-├── package.json          # Dependencies
-├── README.md             # This file
-├── .gitignore            # Git ignore patterns
-└── cue.db               # SQLite database (auto-created)
+chatterbox-express/
+├── index.js                        # Main Express server
+├── database.js                     # SQLite setup and seeding
+├── en_chatterbox_cards.json        # English prompts data
+├── fr_chatterbox_cards.json        # French prompts data
+├── package.json                    # Dependencies
+├── README.md                       # This file
+├── .gitignore                      # Git ignore patterns
+└── chatterbox.db                   # SQLite database (auto-created)
 ```
 
 ## 🔧 Troubleshooting
@@ -186,7 +186,7 @@ PORT=3001 npm start
 ### Database Issues
 
 - Database is auto-created on first run
-- Delete `cue.db` to reset and reseed data
+- Delete `chatterbox.db` to reset and reseed data
 - Check console logs for database errors
 
 ### API Not Responding
@@ -220,7 +220,7 @@ docker-compose logs -f
 
 ### Services Included
 
-- **backend**: Express API server on port 3000
+- **api**: Express API server on port 3000
 - **backup-cron**: Automated backup emails at 12 AM & 12 PM Toronto time
 
 ### Manual Testing
@@ -248,7 +248,7 @@ docker-compose down
 docker-compose up -d --build
 
 # View logs
-docker-compose logs -f backend
+docker-compose logs -f api
 docker-compose logs -f backup-cron
 ```
 

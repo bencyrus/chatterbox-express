@@ -1,7 +1,7 @@
 {
-  "name": "cue-backend",
+  "name": "chatterbox-express",
   "version": "1.0.0",
-  "description": "Production-ready Express API backend for Cue iOS app",
+  "description": "Production-ready Express API for Chatterbox iOS app",
   "type": "module",
   "main": "src/server.js",
   "scripts": {

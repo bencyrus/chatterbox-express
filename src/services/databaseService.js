@@ -140,8 +140,14 @@ class DatabaseService {
     return new Promise((resolve, reject) => {
       try {
         // Load JSON data files
-        const enDataPath = path.join(__dirname, "../../en_cue_cards.json");
-        const frDataPath = path.join(__dirname, "../../fr_cue_cards.json");
+        const enDataPath = path.join(
+          __dirname,
+          "../../en_chatterbox_cards.json"
+        );
+        const frDataPath = path.join(
+          __dirname,
+          "../../fr_chatterbox_cards.json"
+        );
 
         const enData = JSON.parse(fs.readFileSync(enDataPath, "utf8"));
         const frData = JSON.parse(fs.readFileSync(frDataPath, "utf8"));

@@ -10,7 +10,7 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Database file path (in root directory for now to maintain existing data)
-const DB_PATH = path.join(__dirname, "../../cue.db");
+const DB_PATH = path.join(__dirname, "../../chatterbox.db");
 
 /**
  * Initialize database connection
