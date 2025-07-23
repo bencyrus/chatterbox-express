@@ -10,9 +10,9 @@ COPY package*.json ./
 # Install dependencies (production only)
 RUN npm ci --only=production && npm cache clean --force
 
-# Copy source code
+# Copy source code and migrations
 COPY src/ ./src/
-COPY *.json ./
+COPY migrations/ ./migrations/
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \

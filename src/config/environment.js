@@ -5,8 +5,8 @@
 
 const requiredEnvVars = {
   RESEND_API_KEY: "Email service API key",
-  DB_SEND_PASSWORD: "Database backup password",
   JWT_SECRET: "JWT signing secret",
+  CHATTERBOX_POSTGRES_URL: "PostgreSQL database connection URL",
 };
 
 const optionalEnvVars = {
@@ -62,8 +62,8 @@ validateEnvironment();
 export const config = {
   // Required variables
   resendApiKey: process.env.RESEND_API_KEY,
-  dbSendPassword: process.env.DB_SEND_PASSWORD,
   jwtSecret: process.env.JWT_SECRET,
+  postgresUrl: process.env.CHATTERBOX_POSTGRES_URL,
 
   // Optional variables with defaults
   port: getEnvVar("PORT", optionalEnvVars.PORT.default),

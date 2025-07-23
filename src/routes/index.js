@@ -6,14 +6,12 @@
 import express from "express";
 import authRoutes from "./auth.js";
 import promptRoutes from "./prompts.js";
-import backupRoutes from "./backup.js";
 
 const router = express.Router();
 
 // API v1 routes
 router.use("/auth", authRoutes);
 router.use("/prompts", promptRoutes);
-router.use("/", backupRoutes); // backup-db is at root level for backward compatibility
 
 // Health check endpoint (at API level)
 router.get("/health", (req, res) => {
@@ -34,7 +32,6 @@ router.get("/", (req, res) => {
     timestamp: new Date().toISOString(),
     endpoints: [
       "GET /api/v1/prompts?language=en|fr (authenticated)",
-      "POST /api/v1/backup-db",
       "POST /api/v1/auth/request-login",
       "POST /api/v1/auth/verify-login",
       "GET /api/v1/auth/verify",

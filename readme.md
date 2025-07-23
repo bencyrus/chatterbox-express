@@ -1,6 +1,6 @@
 # 🎯 Chatterbox Express API
 
-A simple Express.js API for the Chatterbox iOS app with SQLite database and normalized schema.
+A production-ready Express.js API for the Chatterbox iOS app with PostgreSQL database and automatic migrations.
 
 ## 🚀 Getting Started
 
@@ -8,6 +8,7 @@ A simple Express.js API for the Chatterbox iOS app with SQLite database and norm
 
 - Node.js (v16 or higher)
 - npm
+- PostgreSQL database (managed instance recommended)
 
 ### Installation
 
@@ -17,11 +18,18 @@ A simple Express.js API for the Chatterbox iOS app with SQLite database and norm
 npm install
 ```
 
-2. Create environment file:
+2. Set up environment variables:
 
 ```bash
-cp .env.example .env
-# Edit .env with your actual values
+# Required environment variables:
+export RESEND_API_KEY="re_your_actual_key_here"
+export JWT_SECRET="your_secure_jwt_secret"
+export CHATTERBOX_POSTGRES_URL="postgresql://user:password@host:port/database"
+
+# Optional:
+export PORT=3000
+export NODE_ENV=development
+export CORS_ORIGIN="*"
 ```
 
 3. Start the server:
@@ -30,7 +38,7 @@ cp .env.example .env
 npm start
 ```
 
-The server will run on `http://localhost:3000`
+The server will run on `http://localhost:3000` and automatically apply any pending database migrations.
 
 ### Development Mode
 
@@ -40,38 +48,47 @@ For development with auto-restart:
 npm run dev
 ```
 
-## 📋 API Endpoint
+## 📋 API Endpoints
 
 ### Base URL: `http://localhost:3000/api/v1`
 
-| Method | Endpoint                   | Description                                         |
-| ------ | -------------------------- | --------------------------------------------------- |
-| GET    | `/prompts?language=en\|fr` | Fetch conversation prompts for specific language    |
-| POST   | `/backup-db`               | Send database backup via email (password protected) |
+| Method | Endpoint                   | Description                                      | Auth Required |
+| ------ | -------------------------- | ------------------------------------------------ | ------------- |
+| GET    | `/health`                  | Health check endpoint                            | No            |
+| POST   | `/auth/request-login`      | Request login code via email                     | No            |
+| POST   | `/auth/verify-login`       | Verify login code and get JWT token              | No            |
+| GET    | `/auth/verify`             | Verify JWT token                                 | Yes           |
+| POST   | `/auth/logout`             | Logout user                                      | Yes           |
+| GET    | `/prompts?language=en\|fr` | Fetch conversation prompts for specific language | Yes           |
+| GET    | `/prompts/stats`           | Get prompt statistics                            | Yes           |
+| POST   | `/prompts/validate`        | Validate prompt set structure                    | Yes           |
 
-### Example Request
+### Authentication Flow
 
-#### Get English Prompts
-
-```bash
-curl "http://localhost:3000/api/v1/prompts?language=en"
-```
-
-#### Get French Prompts
-
-```bash
-curl "http://localhost:3000/api/v1/prompts?language=fr"
-```
-
-#### Send Database Backup
+1. **Request login code:**
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/backup-db \
+curl -X POST http://localhost:3000/api/v1/auth/request-login \
   -H "Content-Type: application/json" \
-  -d '{"password": "your_password", "email": "your@email.com"}'
+  -d '{"email": "user@example.com"}'
 ```
 
-### Response Format
+2. **Verify code and get token:**
+
+```bash
+curl -X POST http://localhost:3000/api/v1/auth/verify-login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "code": "123456"}'
+```
+
+3. **Use token for protected endpoints:**
+
+```bash
+curl "http://localhost:3000/api/v1/prompts?language=en" \
+  -H "Authorization: Bearer your_jwt_token_here"
+```
+
+### Example Response (Prompts)
 
 ```json
 [
@@ -116,61 +133,119 @@ self.apiService = NetworkManager(baseURL: "http://localhost:3000/api/v1")
 self.apiService = NetworkManager(baseURL: "http://localhost:3000/api/v1")
 ```
 
-3. **Update your iOS models** to match the new response format with `followups` array
+3. **Implement authentication** in your iOS app to handle JWT tokens
 
 4. **Run your iOS app** - it will now connect to your local Express API!
 
 ## 🗄️ Database Structure
 
-Using **SQLite** with normalized schema:
+Using **PostgreSQL** with automatic migrations:
 
 ### Tables
 
-#### `prompt` table
+#### `prompts` table
 
 ```sql
-create table prompt (
-  prompt_id integer primary key autoincrement,
+create table prompts (
+  promptid serial primary key,
   type text not null check(type in ('main', 'followup')),
-  created_at datetime default current_timestamp,
-  updated_at datetime default current_timestamp
+  created_at timestamp default current_timestamp,
+  updated_at timestamp default current_timestamp
 );
 ```
 
-#### `translation` table
+#### `translations` table
 
 ```sql
-create table translation (
-  translation_id integer primary key autoincrement,
-  prompt_id integer not null,
+create table translations (
+  translationid serial primary key,
+  promptid integer not null,
   language_code text not null check(language_code in ('en', 'fr')),
   text text not null,
-  created_at datetime default current_timestamp,
-  updated_at datetime default current_timestamp,
-  foreign key(prompt_id) references prompt(prompt_id),
-  unique(prompt_id, language_code)
+  created_at timestamp default current_timestamp,
+  updated_at timestamp default current_timestamp,
+  foreign key(promptid) references prompts(promptid),
+  unique(promptid, language_code)
 );
 ```
 
-### Data Organization
+#### `accounts` table
 
-- **10 prompt sets** (main + 4 followups each)
-- **2 languages** (English and French)
-- **Normalized structure** for easy expansion
-- **Automatic seeding** from JSON files
+```sql
+create table accounts (
+  accountid serial primary key,
+  email text not null unique,
+  created_at timestamp default current_timestamp,
+  last_login_at timestamp,
+  is_active boolean default true
+);
+```
+
+#### `login_attempts` table
+
+```sql
+create table login_attempts (
+  attemptid serial primary key,
+  email text not null,
+  code text not null,
+  created_at timestamp default current_timestamp,
+  is_used boolean default false
+);
+```
+
+### Migration System
+
+- **Automatic migrations** run on app startup
+- **Migration files** in `migrations/` folder (numbered SQL files)
+- **Forward-only** migrations (no rollbacks)
+- **Transaction safety** - each migration is atomic
+
+To add a new migration, create a numbered SQL file:
+
+```
+migrations/
+├── 001_initial_tables.sql      ✅ Already applied
+├── 002_your_new_feature.sql    📝 Your new migration
+└── 003_another_change.sql      📝 Future migration
+```
 
 ## 📁 Project Structure
 
 ```
 chatterbox-express/
-├── index.js                        # Main Express server
-├── database.js                     # SQLite setup and seeding
-├── en_chatterbox_cards.json        # English prompts data
-├── fr_chatterbox_cards.json        # French prompts data
-├── package.json                    # Dependencies
-├── README.md                       # This file
-├── .gitignore                      # Git ignore patterns
-└── chatterbox.db                   # SQLite database (auto-created)
+├── src/
+│   ├── app.js                   # Express app setup
+│   ├── server.js                # Server entry point
+│   ├── config/
+│   │   ├── database.js          # PostgreSQL connection
+│   │   └── environment.js       # Environment variables
+│   ├── services/
+│   │   ├── databaseService.js   # Database connection management
+│   │   ├── migrationService.js  # Migration runner
+│   │   ├── authService.js       # Authentication logic
+│   │   ├── promptService.js     # Prompt operations
+│   │   └── emailService.js      # Email sending
+│   ├── routes/
+│   │   ├── index.js             # Route aggregation
+│   │   ├── auth.js              # Authentication routes
+│   │   └── prompts.js           # Prompt routes
+│   ├── controllers/
+│   │   ├── authController.js    # Auth request handlers
+│   │   └── promptController.js  # Prompt request handlers
+│   ├── middlewares/
+│   │   ├── auth.js              # JWT verification
+│   │   ├── errorHandler.js      # Error handling
+│   │   ├── rateLimit.js         # Rate limiting
+│   │   └── validation.js        # Input validation
+│   └── utils/
+│       ├── logger.js            # Logging utility
+│       └── validators.js        # Validation helpers
+├── migrations/
+│   └── 001_initial_tables.sql   # Database migrations
+├── package.json                 # Dependencies
+├── Dockerfile                   # Docker container
+├── docker-compose.yml           # Docker compose setup
+└── README.md                    # This file
 ```
 
 ## 🔧 Troubleshooting
@@ -183,30 +258,41 @@ If port 3000 is busy, set a different port:
 PORT=3001 npm start
 ```
 
-### Database Issues
+### Database Connection Issues
 
-- Database is auto-created on first run
-- Delete `chatterbox.db` to reset and reseed data
-- Check console logs for database errors
+1. Check your `CHATTERBOX_POSTGRES_URL` is correct
+2. Verify your PostgreSQL database is accessible
+3. Check server logs for connection errors
+4. Test database connection manually
+
+### Migration Issues
+
+- Migrations run automatically on startup
+- If a migration fails, the app won't start
+- Fix the SQL in the migration file and restart
+- Check logs for detailed error messages
 
 ### API Not Responding
 
 1. Check server is running: `curl http://localhost:3000/health`
 2. Check server logs in terminal
-3. Verify correct base URL in iOS app
+3. Verify JWT token is valid for protected endpoints
+4. Check environment variables are set
 
 ## 🐳 Docker Deployment
 
-### Quick Start with Docker Compose
+### Environment Setup
 
-1. **Ensure your `.env` file has the correct values:**
+1. **Set up your environment variables:**
 
 ```bash
+# Create .env file or set in your deployment platform
 RESEND_API_KEY=re_your_actual_key_here
-DB_SEND_PASSWORD=12345678
+JWT_SECRET=your_secure_jwt_secret_here
+CHATTERBOX_POSTGRES_URL=postgresql://user:password@host:port/database
 ```
 
-2. **Build and start services:**
+2. **Build and start with Docker Compose:**
 
 ```bash
 docker-compose up -d
@@ -215,24 +301,25 @@ docker-compose up -d
 3. **Check logs:**
 
 ```bash
-docker-compose logs -f
+docker-compose logs -f api
 ```
 
-### Services Included
-
-- **api**: Express API server on port 3000
-- **backup-cron**: Automated backup emails at 12 AM & 12 PM Toronto time
-
-### Manual Testing
+### Manual Docker Commands
 
 ```bash
-# Test backup endpoint
-curl -X POST http://localhost:3000/api/v1/backup-db \
-  -H "Content-Type: application/json" \
-  -d '{"password": "12345678", "email": "realbencyrus@gmail.com"}'
+# Build image
+docker build -t chatterbox-api .
 
-# Check cron logs
-docker-compose logs backup-cron
+# Run container
+docker run -d \
+  -p 3000:3000 \
+  -e RESEND_API_KEY=your_key \
+  -e JWT_SECRET=your_secret \
+  -e CHATTERBOX_POSTGRES_URL=your_db_url \
+  chatterbox-api
+
+# Check logs
+docker logs container_name
 ```
 
 ### Deployment Commands
@@ -249,26 +336,30 @@ docker-compose up -d --build
 
 # View logs
 docker-compose logs -f api
-docker-compose logs -f backup-cron
 ```
 
 ## 🚀 Production Notes
 
 For production deployment:
 
-1. Add proper authentication
-2. Add input validation and error handling
-3. Set up environment variables for configuration
-4. Deploy to a cloud service (Heroku, Railway, etc.)
-5. Consider using PostgreSQL instead of SQLite
+1. ✅ **JWT Authentication** - Already implemented
+2. ✅ **Input validation** - Already implemented
+3. ✅ **Error handling** - Already implemented
+4. ✅ **Rate limiting** - Already implemented
+5. ✅ **PostgreSQL ready** - Using managed database
+6. ✅ **Auto migrations** - Database schema managed automatically
+7. 🔧 **SSL/HTTPS** - Configure in your deployment platform
+8. 🔧 **Environment variables** - Set in your deployment platform
 
 ## 📦 Dependencies
 
 - **express**: Web framework
 - **cors**: Cross-origin resource sharing
-- **sqlite3**: SQLite database driver
+- **pg**: PostgreSQL client
+- **jsonwebtoken**: JWT token handling
+- **resend**: Email service
 - **nodemon**: Development auto-restart (dev only)
 
 ---
 
-**Clean, normalized, and ready to scale! 🎉**
+**Production-ready with PostgreSQL and auto-migrations! 🎉**

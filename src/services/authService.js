@@ -70,21 +70,22 @@ class AuthService {
    * @returns {Promise<boolean>} Whether user can request a new code
    */
   async canRequestLoginCode(email) {
-    return new Promise((resolve, reject) => {
+    const pool = databaseService.getPool();
+    const client = await pool.connect();
+
+    try {
       const query = `
-        SELECT COUNT(*) as count FROM login_attempt 
-        WHERE email = ? AND created_at > datetime('now', '-${this.rateLimitMinutes} minute')
+        select count(*) as count from login_attempts 
+        where email = $1 and created_at > now() - interval '${this.rateLimitMinutes} minutes'
       `;
 
-      const db = databaseService.getDatabase();
-      db.get(query, [email], (err, row) => {
-        if (err) {
-          reject(new Error("Database error checking rate limit"));
-          return;
-        }
-        resolve(row.count === 0);
-      });
-    });
+      const result = await client.query(query, [email]);
+      return result.rows[0].count === "0";
+    } catch (error) {
+      throw new Error("database error checking rate limit");
+    } finally {
+      client.release();
+    }
   }
 
   /**
@@ -94,18 +95,19 @@ class AuthService {
    * @returns {Promise<number>} Login attempt ID
    */
   async storeLoginAttempt(email, code) {
-    return new Promise((resolve, reject) => {
-      const query = "INSERT INTO login_attempt (email, code) VALUES (?, ?)";
+    const pool = databaseService.getPool();
+    const client = await pool.connect();
 
-      const db = databaseService.getDatabase();
-      db.run(query, [email, code], function (err) {
-        if (err) {
-          reject(new Error("Database error storing login attempt"));
-          return;
-        }
-        resolve(this.lastID);
-      });
-    });
+    try {
+      const query =
+        "insert into login_attempts (email, code) values ($1, $2) returning attemptid";
+      const result = await client.query(query, [email, code]);
+      return result.rows[0].attemptid;
+    } catch (error) {
+      throw new Error("database error storing login attempt");
+    } finally {
+      client.release();
+    }
   }
 
   /**
@@ -115,39 +117,43 @@ class AuthService {
    * @returns {Promise<Object|null>} Login attempt object or null if invalid
    */
   async verifyLoginCode(email, code) {
-    return new Promise((resolve, reject) => {
+    const pool = databaseService.getPool();
+    const client = await pool.connect();
+
+    try {
+      await client.query("begin");
+
       const query = `
-        SELECT * FROM login_attempt 
-        WHERE email = ? AND code = ? AND is_used = 0 
-        AND created_at > datetime('now', '-${this.loginCodeExpiryMinutes} minutes')
-        ORDER BY created_at DESC
-        LIMIT 1
+        select * from login_attempts 
+        where email = $1 and code = $2 and is_used = false 
+        and created_at > now() - interval '${this.loginCodeExpiryMinutes} minutes'
+        order by created_at desc
+        limit 1
       `;
 
-      const db = databaseService.getDatabase();
-      db.get(query, [email, code], (err, attempt) => {
-        if (err) {
-          reject(new Error("Database error verifying login code"));
-          return;
-        }
+      const result = await client.query(query, [email, code]);
 
-        if (!attempt) {
-          resolve(null);
-          return;
-        }
+      if (result.rows.length === 0) {
+        await client.query("commit");
+        return null;
+      }
 
-        // Mark attempt as used
-        const markUsedQuery =
-          "UPDATE login_attempt SET is_used = 1 WHERE attempt_id = ?";
-        db.run(markUsedQuery, [attempt.attempt_id], (err) => {
-          if (err) {
-            reject(new Error("Database error marking attempt as used"));
-            return;
-          }
-          resolve(attempt);
-        });
-      });
-    });
+      const attempt = result.rows[0];
+
+      // mark attempt as used
+      await client.query(
+        "update login_attempts set is_used = true where attemptid = $1",
+        [attempt.attemptid]
+      );
+
+      await client.query("commit");
+      return attempt;
+    } catch (error) {
+      await client.query("rollback");
+      throw new Error("database error verifying login code");
+    } finally {
+      client.release();
+    }
   }
 
   /**
@@ -156,18 +162,19 @@ class AuthService {
    * @returns {Promise<Object|null>} User account or null if not found
    */
   async findAccountByEmail(email) {
-    return new Promise((resolve, reject) => {
-      const query = "SELECT * FROM account WHERE email = ?";
+    const pool = databaseService.getPool();
+    const client = await pool.connect();
 
-      const db = databaseService.getDatabase();
-      db.get(query, [email], (err, account) => {
-        if (err) {
-          reject(new Error("Database error finding account"));
-          return;
-        }
-        resolve(account);
-      });
-    });
+    try {
+      const query = "select * from accounts where email = $1";
+      const result = await client.query(query, [email]);
+
+      return result.rows.length > 0 ? result.rows[0] : null;
+    } catch (error) {
+      throw new Error("database error finding account");
+    } finally {
+      client.release();
+    }
   }
 
   /**
@@ -176,19 +183,23 @@ class AuthService {
    * @returns {Promise<number>} New account ID
    */
   async createAccount(email) {
-    return new Promise((resolve, reject) => {
-      const query =
-        'INSERT INTO account (email, last_login_at) VALUES (?, datetime("now"))';
+    const pool = databaseService.getPool();
+    const client = await pool.connect();
 
-      const db = databaseService.getDatabase();
-      db.run(query, [email], function (err) {
-        if (err) {
-          reject(new Error("Database error creating account"));
-          return;
-        }
-        resolve(this.lastID);
-      });
-    });
+    try {
+      const query = `
+        insert into accounts (email, last_login_at) 
+        values ($1, now()) 
+        returning accountid
+      `;
+
+      const result = await client.query(query, [email]);
+      return result.rows[0].accountid;
+    } catch (error) {
+      throw new Error("database error creating account");
+    } finally {
+      client.release();
+    }
   }
 
   /**
@@ -197,19 +208,19 @@ class AuthService {
    * @returns {Promise<void>}
    */
   async updateLastLogin(accountId) {
-    return new Promise((resolve, reject) => {
-      const query =
-        'UPDATE account SET last_login_at = datetime("now") WHERE account_id = ?';
+    const pool = databaseService.getPool();
+    const client = await pool.connect();
 
-      const db = databaseService.getDatabase();
-      db.run(query, [accountId], (err) => {
-        if (err) {
-          console.error("Error updating last login:", err);
-          // Don't reject, as this is not critical
-        }
-        resolve();
-      });
-    });
+    try {
+      const query =
+        "update accounts set last_login_at = now() where accountid = $1";
+      await client.query(query, [accountId]);
+    } catch (error) {
+      console.error("error updating last login:", error);
+      // don't throw, as this is not critical
+    } finally {
+      client.release();
+    }
   }
 
   /**
@@ -223,15 +234,15 @@ class AuthService {
       let accountId;
 
       if (account) {
-        accountId = account.account_id;
+        accountId = account.accountid;
       } else {
         accountId = await this.createAccount(email);
       }
 
-      // Update last login
+      // update last login
       await this.updateLastLogin(accountId);
 
-      // Generate JWT token
+      // generate JWT token
       const token = this.generateJWT(accountId, email);
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
@@ -245,7 +256,7 @@ class AuthService {
         },
       };
     } catch (error) {
-      throw new Error(`Login completion failed: ${error.message}`);
+      throw new Error(`login completion failed: ${error.message}`);
     }
   }
 
@@ -260,7 +271,7 @@ class AuthService {
   }
 }
 
-// Create singleton instance
+// create singleton instance
 const authService = new AuthService();
 
 export default authService;

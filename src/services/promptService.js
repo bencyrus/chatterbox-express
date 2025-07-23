@@ -27,43 +27,39 @@ class PromptService {
    */
   async getPromptsByLanguage(language) {
     if (!language) {
-      throw new Error("Language parameter is required");
+      throw new Error("language parameter is required");
     }
 
     if (!this.isLanguageSupported(language)) {
       throw new Error(
-        `Unsupported language. Supported languages: ${this.supportedLanguages.join(", ")}`
+        `unsupported language. supported languages: ${this.supportedLanguages.join(", ")}`
       );
     }
 
-    return new Promise((resolve, reject) => {
+    const pool = databaseService.getPool();
+    const client = await pool.connect();
+
+    try {
       const query = `
-        SELECT 
-          p.prompt_id,
+        select 
+          p.promptid,
           p.type,
           t.text
-        FROM prompt p
-        JOIN translation t ON p.prompt_id = t.prompt_id
-        WHERE t.language_code = ?
-        ORDER BY p.prompt_id
+        from prompts p
+        join translations t on p.promptid = t.promptid
+        where t.language_code = $1
+        order by p.promptid
       `;
 
-      const db = databaseService.getDatabase();
-      db.all(query, [language], (err, rows) => {
-        if (err) {
-          console.error("Database error fetching prompts:", err);
-          reject(new Error("Database error fetching prompts"));
-          return;
-        }
-
-        try {
-          const promptSets = this.groupPromptsIntoSets(rows);
-          resolve(promptSets);
-        } catch (error) {
-          reject(new Error(`Error processing prompts: ${error.message}`));
-        }
-      });
-    });
+      const result = await client.query(query, [language]);
+      const promptSets = this.groupPromptsIntoSets(result.rows);
+      return promptSets;
+    } catch (error) {
+      console.error("database error fetching prompts:", error);
+      throw new Error("database error fetching prompts");
+    } finally {
+      client.release();
+    }
   }
 
   /**
@@ -77,15 +73,15 @@ class PromptService {
 
     rows.forEach((row) => {
       if (row.type === "main") {
-        // Start new set
+        // start new set
         currentSet = {
-          id: Math.ceil(row.prompt_id / this.promptsPerSet), // Calculate set ID
+          id: Math.ceil(row.promptid / this.promptsPerSet), // calculate set ID
           main_prompt: row.text,
           followups: [],
         };
         promptSets.push(currentSet);
       } else if (row.type === "followup" && currentSet) {
-        // Add followup to current set
+        // add followup to current set
         currentSet.followups.push(row.text);
       }
     });
@@ -98,67 +94,54 @@ class PromptService {
    * @returns {Promise<Object>} Statistics about prompts in the database
    */
   async getPromptStatistics() {
-    return new Promise((resolve, reject) => {
+    const pool = databaseService.getPool();
+    const client = await pool.connect();
+
+    try {
       const queries = {
-        totalPrompts: "SELECT COUNT(*) as count FROM prompt",
-        mainPrompts: 'SELECT COUNT(*) as count FROM prompt WHERE type = "main"',
+        totalPrompts: "select count(*) as count from prompts",
+        mainPrompts:
+          "select count(*) as count from prompts where type = 'main'",
         followupPrompts:
-          'SELECT COUNT(*) as count FROM prompt WHERE type = "followup"',
-        totalTranslations: "SELECT COUNT(*) as count FROM translation",
+          "select count(*) as count from prompts where type = 'followup'",
+        totalTranslations: "select count(*) as count from translations",
         languageBreakdown: `
-          SELECT 
+          select 
             language_code, 
-            COUNT(*) as count 
-          FROM translation 
-          GROUP BY language_code
+            count(*) as count 
+          from translations 
+          group by language_code
         `,
       };
 
-      const db = databaseService.getDatabase();
       const results = {};
 
-      // Execute all queries
-      const queryPromises = Object.entries(queries).map(([key, query]) => {
-        return new Promise((resolveQuery, rejectQuery) => {
-          if (key === "languageBreakdown") {
-            db.all(query, [], (err, rows) => {
-              if (err) {
-                rejectQuery(err);
-                return;
-              }
-              results[key] = rows;
-              resolveQuery();
-            });
-          } else {
-            db.get(query, [], (err, row) => {
-              if (err) {
-                rejectQuery(err);
-                return;
-              }
-              results[key] = row.count;
-              resolveQuery();
-            });
-          }
-        });
-      });
+      // execute individual queries
+      for (const [key, query] of Object.entries(queries)) {
+        if (key === "languageBreakdown") {
+          const result = await client.query(query);
+          results[key] = result.rows;
+        } else {
+          const result = await client.query(query);
+          results[key] = parseInt(result.rows[0].count);
+        }
+      }
 
-      Promise.all(queryPromises)
-        .then(() => {
-          resolve({
-            totalPrompts: results.totalPrompts,
-            mainPrompts: results.mainPrompts,
-            followupPrompts: results.followupPrompts,
-            totalTranslations: results.totalTranslations,
-            promptSets: results.mainPrompts, // Each main prompt represents one set
-            supportedLanguages: this.supportedLanguages,
-            languageBreakdown: results.languageBreakdown,
-          });
-        })
-        .catch((error) => {
-          console.error("Database error fetching statistics:", error);
-          reject(new Error("Database error fetching statistics"));
-        });
-    });
+      return {
+        totalPrompts: results.totalPrompts,
+        mainPrompts: results.mainPrompts,
+        followupPrompts: results.followupPrompts,
+        totalTranslations: results.totalTranslations,
+        promptSets: results.mainPrompts, // each main prompt represents one set
+        supportedLanguages: this.supportedLanguages,
+        languageBreakdown: results.languageBreakdown,
+      };
+    } catch (error) {
+      console.error("database error fetching statistics:", error);
+      throw new Error("database error fetching statistics");
+    } finally {
+      client.release();
+    }
   }
 
   /**
@@ -171,18 +154,18 @@ class PromptService {
 
     promptSets.forEach((set, index) => {
       if (!set.main_prompt || set.main_prompt.trim() === "") {
-        issues.push(`Set ${set.id || index + 1}: Missing main prompt`);
+        issues.push(`set ${set.id || index + 1}: missing main prompt`);
       }
 
       if (!Array.isArray(set.followups)) {
-        issues.push(`Set ${set.id || index + 1}: Followups is not an array`);
+        issues.push(`set ${set.id || index + 1}: followups is not an array`);
       } else if (set.followups.length === 0) {
-        issues.push(`Set ${set.id || index + 1}: No followup prompts`);
+        issues.push(`set ${set.id || index + 1}: no followup prompts`);
       } else {
         set.followups.forEach((followup, followupIndex) => {
           if (!followup || followup.trim() === "") {
             issues.push(
-              `Set ${set.id || index + 1}: Empty followup ${followupIndex + 1}`
+              `set ${set.id || index + 1}: empty followup ${followupIndex + 1}`
             );
           }
         });
@@ -197,7 +180,7 @@ class PromptService {
   }
 }
 
-// Create singleton instance
+// create singleton instance
 const promptService = new PromptService();
 
 export default promptService;

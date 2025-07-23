@@ -88,7 +88,6 @@ export const notFoundHandler = (req, res) => {
     timestamp: new Date().toISOString(),
     availableEndpoints: [
       "GET /api/v1/prompts?language=en|fr (authenticated)",
-      "POST /api/v1/backup-db",
       "POST /api/v1/auth/request-login",
       "POST /api/v1/auth/verify-login",
       "GET /api/v1/auth/verify",

@@ -4,12 +4,7 @@
  */
 
 import { Resend } from "resend";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import config from "../config/environment.js";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 class EmailService {
   constructor() {
@@ -71,59 +66,6 @@ class EmailService {
   }
 
   /**
-   * Send database backup email
-   * @param {string} toEmail - Recipient email address
-   * @returns {Promise<Object>} Email send result with attachment info
-   */
-  async sendDatabaseBackup(toEmail) {
-    try {
-      if (!this.isConfigured()) {
-        throw new Error(
-          "Email service not configured - missing RESEND_API_KEY"
-        );
-      }
-
-      const dbPath = path.join(__dirname, "../../chatterbox.db");
-
-      // Check if database file exists
-      if (!fs.existsSync(dbPath)) {
-        throw new Error("Database file not found");
-      }
-
-      // Read database file
-      const dbBuffer = fs.readFileSync(dbPath);
-
-      // Generate filename with timestamp
-      const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-      const filename = `chatterbox-backup-${timestamp}.db`;
-
-      const result = await this.getResendClient().emails.send({
-        from: this.fromEmail,
-        to: [toEmail],
-        subject: `Chatterbox Database Backup - ${timestamp}`,
-        html: this.generateBackupHTML(timestamp, dbBuffer.length),
-        attachments: [
-          {
-            filename: filename,
-            content: dbBuffer,
-          },
-        ],
-      });
-
-      return {
-        success: true,
-        messageId: result.data?.id,
-        filename: filename,
-        fileSize: dbBuffer.length,
-        error: result.error || null,
-      };
-    } catch (error) {
-      console.error("❌ Error sending database backup:", error);
-      throw new Error(`Failed to send database backup: ${error.message}`);
-    }
-  }
-
-  /**
    * Generate HTML template for login code email
    * @param {string} loginCode - 6-digit login code
    * @returns {string} HTML content
@@ -164,24 +106,6 @@ Enter this code in your Chatterbox app to complete your login.
 This code will expire in 10 minutes for your security.
 
 If you didn't request this code, you can safely ignore this email.`;
-  }
-
-  /**
-   * Generate HTML template for database backup email
-   * @param {string} timestamp - Backup timestamp
-   * @param {number} fileSize - File size in bytes
-   * @returns {string} HTML content
-   */
-  generateBackupHTML(timestamp, fileSize) {
-    return `
-      <h2>Chatterbox Database Backup</h2>
-      <p>Hi there! 👋</p>
-      <p>Here's your scheduled database backup for <strong>${timestamp}</strong>.</p>
-      <p>The attached file contains all your prompts and translations data.</p>
-      <p>File size: ${(fileSize / 1024).toFixed(1)} KB</p>
-      <hr>
-      <p><small>This is an automated backup from your Chatterbox Express API.</small></p>
-    `;
   }
 }
 

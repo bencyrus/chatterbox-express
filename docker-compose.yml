@@ -8,14 +8,9 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - RESEND_API_KEY=${RESEND_API_KEY}
-      - DB_SEND_PASSWORD=${DB_SEND_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
+      - CHATTERBOX_POSTGRES_URL=${CHATTERBOX_POSTGRES_URL}
       - CORS_ORIGIN=*
-    volumes:
-      # Mount database file to persist data
-      - ./chatterbox.db:/app/chatterbox.db
-      - ./en_chatterbox_cards.json:/app/en_chatterbox_cards.json
-      - ./fr_chatterbox_cards.json:/app/fr_chatterbox_cards.json
     restart: unless-stopped
     healthcheck:
       test:

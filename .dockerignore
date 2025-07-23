@@ -37,4 +37,12 @@ coverage
 
 # Build artifacts
 dist
-build 
+build
+
+# Database files (using managed PostgreSQL)
+*.db
+*.sqlite
+*.sqlite3
+
+# Seed data files (removed from app)
+*chatterbox_cards.json 

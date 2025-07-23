@@ -95,33 +95,6 @@ export const validateLanguage = (req, res, next) => {
 };
 
 /**
- * Validate backup password
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next function
- */
-export const validateBackupPassword = (req, res, next) => {
-  const { password } = req.body;
-
-  if (!password) {
-    return res.status(400).json({
-      error: "Validation failed",
-      message: "Password is required",
-      field: "password",
-    });
-  }
-
-  if (password !== config.dbSendPassword) {
-    return res.status(401).json({
-      error: "Authentication failed",
-      message: "Invalid password",
-    });
-  }
-
-  next();
-};
-
-/**
  * Sanitize request body to prevent injection attacks
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -185,11 +158,14 @@ export const validateBodySize = (maxSize = 1024 * 1024) => {
   };
 };
 
+// Combined validation for auth endpoints
+export const validateEmailLogin = [validateEmail];
+export const validateCodeVerification = [validateEmail, validateLoginCode];
+
 export default {
   validateEmail,
   validateLoginCode,
   validateLanguage,
-  validateBackupPassword,
   sanitizeInput,
   validateBodySize,
 };

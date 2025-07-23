@@ -150,13 +150,6 @@ export const rateLimitPresets = {
     message: "Too many API requests, please try again later.",
   }),
 
-  // Strict rate limiting for backup endpoint
-  backup: createRateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 3, // 3 requests per hour
-    message: "Too many backup requests, please try again later.",
-  }),
-
   // Lenient rate limiting for prompt fetching
   prompts: createRateLimit({
     windowMs: 60 * 1000, // 1 minute
