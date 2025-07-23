@@ -136,10 +136,10 @@ export const createRateLimit = (options = {}) => {
  * Preset rate limiters for common use cases
  */
 export const rateLimitPresets = {
-  // Very strict rate limiting for authentication endpoints
+  // More reasonable rate limiting for authentication endpoints
   auth: createRateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 requests per 15 minutes
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 50, // 50 requests per 5 minutes (much more generous)
     message: "Too many authentication attempts, please try again later.",
   }),
 
