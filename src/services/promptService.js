@@ -8,7 +8,6 @@ import databaseService from "./databaseService.js";
 class PromptService {
   constructor() {
     this.supportedLanguages = ["en", "fr"];
-    this.promptsPerSet = 5; // 1 main + 4 followups
   }
 
   /**
@@ -44,11 +43,13 @@ class PromptService {
         select 
           p.promptid,
           p.type,
+          p.prompt_set_id,
+          p.position,
           t.text
         from prompts p
         join translations t on p.promptid = t.promptid
         where t.language_code = $1
-        order by p.promptid
+        order by p.prompt_set_id, p.position
       `;
 
       const result = await client.query(query, [language]);
@@ -69,22 +70,44 @@ class PromptService {
    */
   groupPromptsIntoSets(rows) {
     const promptSets = [];
-    let currentSet = null;
+    const setMap = new Map();
 
     rows.forEach((row) => {
-      if (row.type === "main") {
-        // start new set
-        currentSet = {
-          id: Math.ceil(row.promptid / this.promptsPerSet), // calculate set ID
-          main_prompt: row.text,
+      const setId = row.prompt_set_id;
+
+      // Initialize set if it doesn't exist
+      if (!setMap.has(setId)) {
+        setMap.set(setId, {
+          id: setId,
+          main_prompt: "",
           followups: [],
-        };
-        promptSets.push(currentSet);
-      } else if (row.type === "followup" && currentSet) {
-        // add followup to current set
-        currentSet.followups.push(row.text);
+        });
+      }
+
+      const promptSet = setMap.get(setId);
+
+      if (row.type === "main") {
+        promptSet.main_prompt = row.text;
+      } else if (row.type === "followup") {
+        // Insert followup at the correct position (position - 1 since main is position 0)
+        const followupIndex = row.position - 1;
+        promptSet.followups[followupIndex] = row.text;
       }
     });
+
+    // Convert map to array and filter out any incomplete sets
+    for (const promptSet of setMap.values()) {
+      if (promptSet.main_prompt) {
+        // Remove any undefined elements from followups array
+        promptSet.followups = promptSet.followups.filter(
+          (followup) => followup !== undefined
+        );
+        promptSets.push(promptSet);
+      }
+    }
+
+    // Sort by set ID for consistent ordering
+    promptSets.sort((a, b) => a.id - b.id);
 
     return promptSets;
   }
